@@ -1,0 +1,16 @@
+```json
+{
+  "name": "favz-scraper-service",
+  "version": "1.0.0",
+  "description": "Serverless product scraper with Playwright",
+  "main": "api/scrape.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'No build step required'"
+  },
+  "dependencies": {
+    "playwright-aws-lambda": "^0.10.0",
+    "playwright-core": "^1.40.0"
+  }
+}
+```
