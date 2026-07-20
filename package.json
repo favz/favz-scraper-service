@@ -8,7 +8,7 @@
     "build": "echo 'No build step required'"
   },
   "dependencies": {
-    "playwright-aws-lambda": "^0.10.0",
+"@sparticuz/chromium": "^119.0.2",
     "playwright-core": "^1.40.0"
   }
 }
