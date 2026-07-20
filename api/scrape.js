@@ -1,5 +1,6 @@
 ```javascript
-import playwright from 'playwright-aws-lambda';
+import chromium from '@sparticuz/chromium';
+import { chromium as playwright } from 'playwright-core';
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -22,15 +23,17 @@ export default async function handler(req, res) {
 
   console.log('[SCRAPER] Processing URL:', url);
 
-  let browser = null;
   
   try {
     // Launch browser
-    browser = await playwright.launchChromium();
-    const context = await browser.newContext({
+    browser = await playwright.launch({
+      args: chromium.args,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
+    });
+        const context = await browser.newContext({
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
     });
-    
     const page = await context.newPage();
     
     // Navigate to URL with timeout
