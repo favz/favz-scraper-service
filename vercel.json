@@ -1,9 +1,10 @@
-{
-  "functions": {
-    "api/scrape.js": {
-      "memory": 1024,
-      "maxDuration": 30
-    }
+module.exports = async function handler(req, res) {
+  try {
+    return res.status(200).json({ ok: true });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      error: error.message || 'Erro interno'
+    });
   }
 }
-
