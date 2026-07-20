@@ -1,4 +1,3 @@
-```javascript
 import chromium from '@sparticuz/chromium';
 import { chromium as playwright } from 'playwright-core';
 
@@ -197,4 +196,3 @@ async function scrapeGeneric(page) {
     return { name: 'Produto', price: '', image: '' };
   }
 }
-```
