@@ -39,6 +39,7 @@ function withDeadline(promise, ms, label = 'operação') {
 }
 
 async function launchBrowser() {
+  chromium.setGraphicsMode = false;
   console.log('[scrape] Resolvendo executablePath do chromium...');
 
   // Em ambiente serverless (Vercel) usamos o binário empacotado do @sparticuz/chromium.
