@@ -3,20 +3,7 @@
 // Endpoint: /api/scrape?url=PRODUCT_URL
 
 import chromium from '@sparticuz/chromium';
-import { chromium as playwrightCore } from 'playwright-core';
-import { addExtra } from 'playwright-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
-
-// Importante: usamos `addExtra` com um import ESTÁTICO de 'playwright-core' em vez do
-// export padrão de 'playwright-extra' (que faz um require dinâmico internamente para
-// "descobrir" playwright-core/playwright). Bundlers como o do Vercel (esbuild/ncc) não
-// enxergam esse require dinâmico e acabam não incluindo o pacote no bundle final,
-// causando o erro "Playwright is missing" em produção mesmo com a dependência instalada.
-const playwright = addExtra(playwrightCore);
-
-// Habilita o plugin stealth: mascara navigator.webdriver, plugins e outros
-// sinais que marketplaces usam para detectar navegadores automatizados.
-playwright.use(StealthPlugin());
+import { chromium as playwright } from 'playwright-core';
 
 // Vercel Hobby plan: 10s de limite de execução.
 // Reservamos margem para cold start do chromium + resposta.
@@ -49,6 +36,44 @@ function withDeadline(promise, ms, label = 'operação') {
     timer = setTimeout(() => reject(new Error(`Timeout: ${label} excedeu ${ms}ms`)), ms);
   });
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+// Aplica evasões anti-detecção manualmente via addInitScript, sem depender de
+// playwright-extra/puppeteer-extra-plugin-stealth. Esses pacotes resolvem suas
+// sub-evasões via require dinâmico em runtime, o que quebra em bundlers estáticos
+// como o do Vercel ("Plugin dependency not found"). Reimplementamos aqui as
+// evasões mais relevantes como um único script estático, sem dependências externas.
+async function applyStealthEvasions(context) {
+  await context.addInitScript(() => {
+    // 1. navigator.webdriver: o sinal mais comum de detecção de automação.
+    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+
+    // 2. window.chrome: Chromium headless não expõe esse objeto por padrão.
+    window.chrome = window.chrome || { runtime: {}, loadTimes: () => {}, csi: () => {}, app: {} };
+
+    // 3. navigator.permissions.query: headless retorna estados diferentes do Chrome real.
+    const originalQuery = window.navigator.permissions.query.bind(window.navigator.permissions);
+    window.navigator.permissions.query = (parameters) =>
+      parameters.name === 'notifications'
+        ? Promise.resolve({ state: Notification.permission })
+        : originalQuery(parameters);
+
+    // 4. navigator.plugins/mimeTypes: Chromium headless tem array vazio, Chrome real não.
+    Object.defineProperty(navigator, 'plugins', {
+      get: () => [1, 2, 3, 4, 5].map(() => ({ name: 'Chrome PDF Plugin' })),
+    });
+
+    // 5. navigator.languages: mantém consistência com o header Accept-Language.
+    Object.defineProperty(navigator, 'languages', { get: () => ['pt-BR', 'pt', 'en-US', 'en'] });
+
+    // 6. WebGL vendor/renderer: evita expor o fingerprint do SwiftShader (renderizador de software).
+    const getParameter = WebGLRenderingContext.prototype.getParameter;
+    WebGLRenderingContext.prototype.getParameter = function (parameter) {
+      if (parameter === 37445) return 'Intel Inc.'; // UNMASKED_VENDOR_WEBGL
+      if (parameter === 37446) return 'Intel Iris OpenGL Engine'; // UNMASKED_RENDERER_WEBGL
+      return getParameter.call(this, parameter);
+    };
+  });
 }
 
 async function launchBrowser() {
@@ -233,11 +258,7 @@ export default async function handler(req, res) {
       },
     });
 
-    // Camada extra de segurança além do stealth plugin: garante que
-    // navigator.webdriver permaneça undefined mesmo se o site checar antes do stealth agir.
-    await context.addInitScript(() => {
-      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-    });
+    await applyStealthEvasions(context);
 
     const page = await context.newPage();
 
