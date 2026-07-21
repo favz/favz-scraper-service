@@ -8,7 +8,7 @@
     "build": "echo 'No build step required'"
   },
   "dependencies": {
-"@sparticuz/chromium": "^119.0.2",
-    "playwright-core": "^1.40.0"
-  }
+  "@sparticuz/chromium": "^149.0.0",
+  "playwright-core": "^1.61.1"
+}
 }
