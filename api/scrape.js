@@ -52,7 +52,7 @@ async function launchBrowser() {
   const browser = await playwright.launch({
     args: isLocalDev ? [] : chromium.args,
     executablePath,
-    headless: isLocalDev ? true : chromium.headless,
+    headless: true,
   });
 
   console.log('[scrape] Browser iniciado com sucesso.');
